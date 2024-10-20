@@ -100,10 +100,10 @@ public class WindowsProtectedKeychainAccess implements KeychainAccessProvider {
 		byte[] cleartext = new byte[buf.remaining()];
 		buf.get(cleartext);
 		var salt = generateSalt();
-		var ciphertext = !requireAuth ? dataProtection.protect(cleartext, salt) : windowsHello.setEncryptionKey(cleartext, salt);
+		var ciphertext = requireAuth ? windowsHello.setEncryptionKey(cleartext, salt) : dataProtection.protect(cleartext, salt);
 		Arrays.fill(buf.array(), (byte) 0x00);
 		Arrays.fill(cleartext, (byte) 0x00);
-		keychainEntries.put(key, new KeychainEntry(ciphertext, salt));
+		keychainEntries.put(key, new KeychainEntry(ciphertext, salt, requireAuth));
 		saveKeychainEntries();
 	}
 
@@ -114,7 +114,7 @@ public class WindowsProtectedKeychainAccess implements KeychainAccessProvider {
 		if (entry == null) {
 			return null;
 		}
-		byte[] cleartext = dataProtection.unprotect(entry.ciphertext(), entry.salt());
+		var cleartext = entry.requireAuth() ? windowsHello.getEncryptionKey(entry.ciphertext(), entry.salt()) : dataProtection.unprotect(entry.ciphertext(), entry.salt());
 		if (cleartext == null) {
 			return null;
 		}
@@ -137,7 +137,7 @@ public class WindowsProtectedKeychainAccess implements KeychainAccessProvider {
 	public void changePassphrase(String key, String displayName, CharSequence passphrase) throws KeychainAccessException {
 		loadKeychainEntriesIfNeeded();
 		if (keychainEntries.remove(key) != null) {
-			storePassphrase(key, passphrase);
+			storePassphrase(key, displayName, passphrase);
 		}
 	}
 
@@ -183,7 +183,17 @@ public class WindowsProtectedKeychainAccess implements KeychainAccessProvider {
 		};
 		try (InputStream in = Files.newInputStream(keychainPath, StandardOpenOption.READ); //
 			 Reader reader = new InputStreamReader(in, UTF_8)) {
-			return Optional.ofNullable(JSON_MAPPER.readValue(reader, type));
+			Map<String, KeychainEntry> keychainEntries = JSON_MAPPER.readValue(reader, type);
+
+			// Migrate legacy entries that don't have the requireAuth field
+			keychainEntries.replaceAll((key, entry) -> {
+				if (!entry.requireAuth()) {
+					return new KeychainEntry(entry.ciphertext(), entry.salt(), false);
+				}
+				return entry;
+			});
+
+			return Optional.of(keychainEntries);
 		} catch (NoSuchFileException e) {
 			return Optional.empty();
 		} catch (JacksonException je) {
