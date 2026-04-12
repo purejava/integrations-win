@@ -93,7 +93,20 @@ public class ShellNotifyIconTrayMenuController implements TrayMenuController {
 
 	@CheckAvailability
 	public static boolean isAvailable() {
-		return Platform.isWindows();
+		return isWindows() && isJnaAvailable();
+	}
+
+	private static boolean isWindows() {
+		return System.getProperty("os.name").toLowerCase().contains("win");
+	}
+
+	private static boolean isJnaAvailable() {
+		try {
+			com.sun.jna.platform.win32.User32.INSTANCE.GetDesktopWindow();
+			return true;
+		} catch (Throwable t) {
+			return false;
+		}
 	}
 
 	@Override
