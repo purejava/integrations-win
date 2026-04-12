@@ -22,7 +22,7 @@ module org.cryptomator.integrations.win {
 
 	opens org.cryptomator.windows.keychain to com.fasterxml.jackson.databind;
 	opens org.cryptomator.windows.quickaccess to org.cryptomator.integrations.api;
-	opens org.cryptomator.windows.tray to org.cryptomator.integrations.api;
+	opens org.cryptomator.windows.tray to com.sun.jna, org.cryptomator.integrations.api;
 
 	provides AutoStartProvider with WindowsAutoStart;
 	provides KeychainAccessProvider with WindowsProtectedKeychainAccess, WindowsHelloKeychainAccess;
@@ -30,5 +30,4 @@ module org.cryptomator.integrations.win {
 	provides RevealPathService with ExplorerRevealPathService;
 	provides QuickAccessService with ExplorerQuickAccessService;
 	provides TrayMenuController with ShellNotifyIconTrayMenuController;
-
 }
