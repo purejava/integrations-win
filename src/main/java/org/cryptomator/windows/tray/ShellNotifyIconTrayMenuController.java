@@ -72,7 +72,7 @@ public class ShellNotifyIconTrayMenuController implements TrayMenuController {
 	private final WinUser.WindowProc windowProc = (hWnd, uMsg, wParam, lParam) -> {
 		switch (uMsg) {
 			case WMAPP_NOTIFYCALLBACK:
-				return handleTrayCallback(hWnd, lParam);
+				return handleTrayCallback(hWnd, wParam, lParam);
 			case WM_COMMAND: {
 				int commandId = wParam.intValue() & 0xFFFF;
 				Runnable action = commandHandlers.get(commandId);
@@ -234,15 +234,15 @@ public class ShellNotifyIconTrayMenuController implements TrayMenuController {
 		}
 	}
 
-	private WinDef.LRESULT handleTrayCallback(WinDef.HWND hWnd, WinDef.LPARAM lParam) {
-		int mouseMessage = lParam.intValue();
+	private WinDef.LRESULT handleTrayCallback(WinDef.HWND hWnd, WinDef.WPARAM wParam, WinDef.LPARAM lParam) {
+		int event = lParam.intValue() & 0xFFFF;
 
-		if (mouseMessage == WM_LBUTTONDBLCLK) {
+		if (event == WM_LBUTTONDBLCLK) {
 			defaultAction.run();
 			return new WinDef.LRESULT(0);
 		}
 
-		if (mouseMessage == WM_RBUTTONUP || mouseMessage == WM_CONTEXTMENU) {
+		if (event == WM_RBUTTONUP || event == WM_CONTEXTMENU) {
 			showPopupMenu(hWnd);
 			return new WinDef.LRESULT(0);
 		}
